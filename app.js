@@ -1,0 +1,15 @@
+const $=id=>document.getElementById(id);
+const KEY="jcplay.servers.v1";
+let servers=loadServers();
+function loadServers(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch{return[]}}
+function saveServers(){localStorage.setItem(KEY,JSON.stringify(servers))}
+function cleanUrl(value){return value.trim().replace(/\\/+$/,"")}
+function notify(text){$("message").textContent=text}
+function refreshServers(selected=""){const s=$("serverSelect");s.innerHTML='<option value="">Selecione um servidor</option>';servers.forEach((item,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=item.name||item.url;s.appendChild(o)});if(selected!==""&&servers[selected])s.value=selected}
+$("addServer").addEventListener("click",()=>{const url=cleanUrl($("baseUrl").value),username=$("username").value.trim(),password=$("password").value;if(!url||!username||!password){notify("Preencha endereço, usuário e senha.");return}try{new URL(url)}catch{notify("Endereço inválido.");return}const name=new URL(url).hostname;const existing=servers.findIndex(x=>x.url===url&&x.username===username);const item={name,url,username,password};if(existing>=0)servers[existing]=item;else servers.push(item);saveServers();refreshServers(String(servers.length-1));notify("Servidor salvo neste aparelho.")});
+$("serverSelect").addEventListener("change",()=>{const item=servers[Number($("serverSelect").value)];if(!item)return;$("baseUrl").value=item.url;$("username").value=item.username;$("password").value=item.password;notify("Dados carregados. Toque em Conectar.")});
+$("removeServer").addEventListener("click",()=>{const i=Number($("serverSelect").value);if(!Number.isInteger(i)||!servers[i]){notify("Selecione um servidor para remover.");return}servers.splice(i,1);saveServers();refreshServers();notify("Servidor removido.")});
+$("connect").addEventListener("click",()=>{const url=cleanUrl($("baseUrl").value),username=$("username").value.trim(),password=$("password").value;if(!url||!username||!password){notify("Informe endereço, usuário e senha.");return}try{new URL(url)}catch{notify("Endereço inválido.");return}const i=servers.findIndex(x=>x.url===url&&x.username===username);if(i<0){servers.push({name:new URL(url).hostname,url,username,password});saveServers();refreshServers(String(servers.length-1))}notify("Servidor salvo. A autenticação e os catálogos precisam da API compatível do provedor.")});
+$("connectM3u").addEventListener("click",()=>{const url=$("playlistUrl").value.trim();try{const parsed=new URL(url);if(!/^https?:$/.test(parsed.protocol))throw Error();$("loginView").classList.add("hidden");$("playerView").classList.remove("hidden");$("connectedName").textContent="Lista M3U";$("playerMessage").textContent="URL recebida. A leitura de catálogo e reprodução serão integradas na próxima etapa."}catch{notify("Informe uma URL M3U/M3U8 válida.")}});
+$("logout").addEventListener("click",()=>{$("playerView").classList.add("hidden");$("loginView").classList.remove("hidden");$("video").pause()});
+refreshServers();
